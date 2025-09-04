@@ -1,5 +1,6 @@
 ﻿using ClientTicketingSaaS.Domain.Constants;
 using ClientTicketingSaaS.Domain.Entities;
+using ClientTicketingSaaS.Domain.Enums;
 using ClientTicketingSaaS.Infrastructure.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
@@ -40,8 +41,6 @@ public class ApplicationDbContextInitialiser
     {
         try
         {
-            // See https://jasontaylor.dev/ef-core-database-initialisation-strategies
-            await _context.Database.EnsureDeletedAsync();
             await _context.Database.EnsureCreatedAsync();
         }
         catch (Exception ex)
@@ -74,33 +73,71 @@ public class ApplicationDbContextInitialiser
             await _roleManager.CreateAsync(administratorRole);
         }
 
-        // Default users
-        var administrator = new ApplicationUser { UserName = "administrator@localhost", Email = "administrator@localhost" };
-
-        if (_userManager.Users.All(u => u.UserName != administrator.UserName))
+        // Create default tenant
+        if (!_context.Tenants.Any())
         {
-            await _userManager.CreateAsync(administrator, "Administrator1!");
-            if (!string.IsNullOrWhiteSpace(administratorRole.Name))
+            var defaultTenant = new Tenant
             {
-                await _userManager.AddToRolesAsync(administrator, new [] { administratorRole.Name });
-            }
-        }
+                Name = "Demo Company",
+                Subdomain = "demo",
+                IsActive = true,
+                Plan = SubscriptionPlan.Professional,
+                MaxUsers = 10,
+                MaxTickets = 500,
+                CurrentUsers = 0,
+                CurrentTickets = 0
+            };
 
-        // Default data
-        // Seed, if necessary
-        if (!_context.TodoLists.Any())
-        {
-            _context.TodoLists.Add(new TodoList
+            _context.Tenants.Add(defaultTenant);
+            await _context.SaveChangesAsync();
+
+            // Create default admin user for the tenant
+            var administrator = new ApplicationUser 
+            { 
+                UserName = "admin@demo.com", 
+                Email = "admin@demo.com",
+                FirstName = "Admin",
+                LastName = "User",
+                TenantId = defaultTenant.Id,
+                IsActive = true
+            };
+
+            if (_userManager.Users.All(u => u.UserName != administrator.UserName))
             {
-                Title = "Todo List",
-                Items =
+                await _userManager.CreateAsync(administrator, "Administrator1!");
+                if (!string.IsNullOrWhiteSpace(administratorRole.Name))
                 {
-                    new TodoItem { Title = "Make a todo list 📃" },
-                    new TodoItem { Title = "Check off the first item ✅" },
-                    new TodoItem { Title = "Realise you've already done two things on the list! 🤯"},
-                    new TodoItem { Title = "Reward yourself with a nice, long nap 🏆" },
+                    await _userManager.AddToRolesAsync(administrator, new [] { administratorRole.Name });
                 }
-            });
+            }
+
+            // Create sample client
+            var sampleClient = new Client
+            {
+                TenantId = defaultTenant.Id,
+                Name = "Acme Corporation",
+                Email = "contact@acme.com",
+                Phone = "555-123-4567",
+                Company = "Acme Corporation",
+                IsActive = true
+            };
+
+            _context.Clients.Add(sampleClient);
+
+            // Create sample ticket
+            var sampleTicket = new Ticket
+            {
+                TenantId = defaultTenant.Id,
+                Title = "Welcome to your new ticketing system!",
+                Description = "This is a sample ticket to demonstrate the system. You can edit or delete this ticket.",
+                Status = TicketStatus.Open,
+                Priority = TicketPriority.Medium,
+                ClientId = sampleClient.Id,
+                EstimatedHours = 2,
+                ActualHours = 0
+            };
+
+            _context.Tickets.Add(sampleTicket);
 
             await _context.SaveChangesAsync();
         }

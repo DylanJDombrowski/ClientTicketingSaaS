@@ -3,6 +3,7 @@ using ClientTicketingSaaS.Domain.Constants;
 using ClientTicketingSaaS.Infrastructure.Data;
 using ClientTicketingSaaS.Infrastructure.Data.Interceptors;
 using ClientTicketingSaaS.Infrastructure.Identity;
+using ClientTicketingSaaS.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -24,13 +25,12 @@ public static class DependencyInjection
         builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
-            options.UseSqlServer(connectionString);
+            // Switch from SQL Server to PostgreSQL
+            options.UseNpgsql(connectionString);
             options.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
         });
 
-
         builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
-
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
         builder.Services
@@ -40,6 +40,9 @@ public static class DependencyInjection
 
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddTransient<IIdentityService, IdentityService>();
+        
+        // Add tenant service
+        builder.Services.AddScoped<ITenantService, TenantService>();
 
         builder.Services.AddAuthorization(options =>
             options.AddPolicy(Policies.CanPurge, policy => policy.RequireRole(Roles.Administrator)));
