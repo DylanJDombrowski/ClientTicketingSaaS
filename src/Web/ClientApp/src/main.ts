@@ -1,20 +1,13 @@
-import { enableProdMode } from '@angular/core';
-import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
+import App from './App.vue';
+import router from './router';
+import './style.css';
 
-import { AppModule } from './app/app.module';
-import { environment } from './environments/environment';
+const app = createApp(App);
+const pinia = createPinia();
 
-export function getBaseUrl() {
-  return document.getElementsByTagName('base')[0].href;
-}
+app.use(pinia);
+app.use(router);
 
-const providers = [
-  { provide: 'BASE_URL', useFactory: getBaseUrl, deps: [] }
-];
-
-if (environment.production) {
-  enableProdMode();
-}
-
-platformBrowserDynamic(providers).bootstrapModule(AppModule)
-  .catch(err => console.log(err));
+app.mount('#app');
