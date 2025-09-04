@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { User } from '../types/auth';
+import type { User, RegisterRequest, RegisterResponse } from '../types/auth';
 import { authApi } from '../services/api/auth';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -39,12 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  const register = async (userData: {
-    email: string;
-    password: string;
-    confirmPassword: string;
-    tenantName: string;
-  }) => {
+  const register = async (userData: RegisterRequest) => {
     loading.value = true;
     error.value = null;
 
