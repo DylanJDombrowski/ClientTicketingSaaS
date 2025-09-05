@@ -74,27 +74,26 @@ const router = createRouter({
 
 // Navigation guard for authentication
 router.beforeEach(async (to, from, next) => {
-  // Temporarily bypass auth for testing
-  next();
+  const authStore = useAuthStore();
 
-  /* Comment out until auth is implemented
-  const authStore = useAuthStore()
-  
   if (!authStore.currentUser && authStore.token) {
-    await authStore.initialize()
+    await authStore.initialize();
   }
 
-  const requiresAuth = to.meta.requiresAuth !== false
-  const isAuthenticated = authStore.isAuthenticated
+  const requiresAuth = to.meta.requiresAuth !== false;
+  const isAuthenticated = authStore.isAuthenticated;
 
   if (requiresAuth && !isAuthenticated) {
-    next({ name: 'Login', query: { redirect: to.fullPath } })
-  } else if (!requiresAuth && isAuthenticated && (to.name === 'Login' || to.name === 'Register')) {
-    next({ name: 'Dashboard' })
+    next({ name: 'Login', query: { redirect: to.fullPath } });
+  } else if (
+    !requiresAuth &&
+    isAuthenticated &&
+    (to.name === 'Login' || to.name === 'Register')
+  ) {
+    next({ name: 'Dashboard' });
   } else {
-    next()
+    next();
   }
-  */
 });
 
 export default router;

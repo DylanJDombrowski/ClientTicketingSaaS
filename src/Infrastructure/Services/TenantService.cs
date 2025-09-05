@@ -1,5 +1,6 @@
 using ClientTicketingSaaS.Application.Common.Interfaces;
 using ClientTicketingSaaS.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClientTicketingSaaS.Infrastructure.Services;
@@ -7,27 +8,42 @@ namespace ClientTicketingSaaS.Infrastructure.Services;
 public class TenantService : ITenantService
 {
     private readonly IApplicationDbContext _context;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private int _tenantId;
     
-    public TenantService(IApplicationDbContext context)
+    public TenantService(IApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public int GetCurrentTenantId()
     {
-        if (_tenantId == 0)
+        // First, try to get from JWT token
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext?.User?.Identity?.IsAuthenticated == true)
         {
-            // Fallback to default tenant for testing when no auth context exists
-            var defaultTenant = _context.Tenants.FirstOrDefault();
-            if (defaultTenant != null)
+            var tenantIdClaim = httpContext.User.FindFirst("tenant_id");
+            if (tenantIdClaim != null && int.TryParse(tenantIdClaim.Value, out var tokenTenantId))
             {
-                return defaultTenant.Id;
+                return tokenTenantId;
             }
-            
-            throw new InvalidOperationException("Tenant ID has not been set and no default tenant found. Multi-tenant context is required.");
         }
-        return _tenantId;
+
+        // Fallback to manually set tenant ID
+        if (_tenantId != 0)
+        {
+            return _tenantId;
+        }
+
+        // Final fallback to default tenant for development
+        var defaultTenant = _context.Tenants.FirstOrDefault();
+        if (defaultTenant != null)
+        {
+            return defaultTenant.Id;
+        }
+        
+        throw new InvalidOperationException("Tenant ID has not been set and no default tenant found. Multi-tenant context is required.");
     }
 
     public async Task<Tenant?> GetCurrentTenantAsync()

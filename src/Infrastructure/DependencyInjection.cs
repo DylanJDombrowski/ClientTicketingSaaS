@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using ClientTicketingSaaS.Infrastructure.Authentication;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -40,11 +41,16 @@ public static class DependencyInjection
 
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddTransient<IIdentityService, IdentityService>();
-        
+
         // Add tenant service
         builder.Services.AddScoped<ITenantService, TenantService>();
 
         builder.Services.AddAuthorization(options =>
             options.AddPolicy(Policies.CanPurge, policy => policy.RequireRole(Roles.Administrator)));
+
+        builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+        builder.Services.AddScoped<IJwtService, JwtService>();
+        builder.Services.AddHttpContextAccessor();
+
     }
 }

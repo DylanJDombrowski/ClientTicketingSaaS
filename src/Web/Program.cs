@@ -1,4 +1,7 @@
+using System.Text;
 using ClientTicketingSaaS.Infrastructure.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,11 +10,30 @@ builder.AddKeyVaultIfConfigured();
 builder.AddApplicationServices();
 builder.AddInfrastructureServices();
 builder.AddWebServices();
+
+// Add JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+            ValidAudience = builder.Configuration["JwtSettings:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]!))
+        };
+    });
+
+// Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Development", policy =>
     {
-            policy.WithOrigins("http://localhost:4200", "http://localhost:4201") // Add both ports
+        policy.WithOrigins("http://localhost:4200", "http://localhost:4201")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -20,7 +42,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment() && args.Length == 0)
 {
@@ -28,17 +49,23 @@ if (app.Environment.IsDevelopment() && args.Length == 0)
 }
 else
 {
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHealthChecks("/health");
-// app.UseHttpsRedirection();
+
+// Comment out HTTPS redirect for development
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+app.UseStaticFiles();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseCors("Development");
 }
-app.UseStaticFiles();
 
 app.UseSwaggerUi(settings =>
 {
@@ -47,10 +74,12 @@ app.UseSwaggerUi(settings =>
 });
 
 app.MapRazorPages();
-
 app.MapFallbackToFile("index.html");
-
 app.UseExceptionHandler(options => { });
+
+// Add authentication middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapEndpoints();
 

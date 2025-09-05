@@ -10,11 +10,11 @@ public class Clients : EndpointGroupBase
 {
     public override void Map(RouteGroupBuilder groupBuilder)
     {
-        groupBuilder.MapGet(GetClients);
-        groupBuilder.MapPost(CreateClient);
-        groupBuilder.MapGet(GetClient, "{id}");
-        groupBuilder.MapPut(UpdateClient, "{id}");
-        groupBuilder.MapDelete(DeleteClient, "{id}");
+        groupBuilder.MapGet(GetClients).RequireAuthorization();
+        groupBuilder.MapPost(CreateClient).RequireAuthorization();
+        groupBuilder.MapGet(GetClient, "{id}").RequireAuthorization();
+        groupBuilder.MapPut(UpdateClient, "{id}").RequireAuthorization();
+        groupBuilder.MapDelete(DeleteClient, "{id}").RequireAuthorization();
     }
 
     public async Task<IResult> GetClients(ISender sender)

@@ -1,10 +1,9 @@
 using System.Security.Claims;
-using ClientTicketingSaaS.Infrastructure.Identity;
 
 namespace ClientTicketingSaaS.Application.Common.Interfaces;
 
 public interface IJwtService
 {
-    string GenerateToken(ApplicationUser user, int tenantId);
+    string GenerateToken(string userId, string email, int tenantId, string role);
     ClaimsPrincipal? ValidateToken(string token);
 }

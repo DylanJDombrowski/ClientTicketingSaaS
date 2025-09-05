@@ -9,12 +9,10 @@ import type {
 } from '../../types/auth';
 
 export const authApi = {
-  // Login user
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     return await apiClient.post<LoginResponse>('/auth/login', credentials);
   },
 
-  // Register new user and tenant
   async register(userData: RegisterRequest): Promise<RegisterResponse> {
     return await apiClient.post<RegisterResponse>('/auth/register', userData);
   },
