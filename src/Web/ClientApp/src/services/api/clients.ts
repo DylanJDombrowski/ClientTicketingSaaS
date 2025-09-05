@@ -11,39 +11,32 @@ export const clientsApi = {
     return await apiClient.get<Client[]>('/clients');
   },
 
-  // Get single client by ID (not implemented yet)
+  // Get single client by ID - NOW IMPLEMENTED
   async getClient(id: number): Promise<Client> {
-    throw new Error('Get single client not implemented yet');
+    return await apiClient.get<Client>(`/clients/${id}`);
   },
 
-  // Create new client - Fixed to work with current API
+  // Create new client - FIXED
   async createClient(data: CreateClientRequest): Promise<Client> {
     const response = await apiClient.post<{ id: number }>('/clients', data);
-
-    // Return a client object with the new ID and submitted data
-    return {
-      id: response.id,
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      company: data.company,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    // Now we can fetch the created client since GET single client works
+    return await this.getClient(response.id);
   },
 
-  // Update existing client (not implemented yet)
+  // Update existing client - NOW IMPLEMENTED
   async updateClient(id: number, data: UpdateClientRequest): Promise<Client> {
-    throw new Error('Update client not implemented yet');
+    // Your API expects the ID in the body for validation
+    const updateData = { ...data, id };
+    await apiClient.put<void>(`/clients/${id}`, updateData);
+    return await this.getClient(id);
   },
 
-  // Delete client (not implemented yet)
+  // Delete client - NOW IMPLEMENTED
   async deleteClient(id: number): Promise<void> {
-    throw new Error('Delete client not implemented yet');
+    return await apiClient.delete<void>(`/clients/${id}`);
   },
 
-  // Search clients (not implemented yet)
+  // Search clients (future enhancement)
   async searchClients(query: string): Promise<Client[]> {
     throw new Error('Search clients not implemented yet');
   },

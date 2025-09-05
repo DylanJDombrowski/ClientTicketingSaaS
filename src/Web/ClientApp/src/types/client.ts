@@ -24,12 +24,7 @@ export interface UpdateClientRequest {
   isActive?: boolean;
 }
 
-export interface ClientsResponse {
-  clients: Client[];
-  totalCount: number;
-}
-
-// For validation errors
+// Add this for validation errors
 export interface ValidationError {
   propertyName: string;
   errorMessage: string;

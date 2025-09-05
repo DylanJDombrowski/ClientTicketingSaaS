@@ -82,7 +82,14 @@ export const useClientsStore = defineStore('clients', () => {
 
       return { success: true, client: updatedClient };
     } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to update client';
+      if (
+        err.response?.status === 400 &&
+        err.response?.data?.includes('ID mismatch')
+      ) {
+        error.value = 'Invalid client ID';
+      } else {
+        error.value = err.response?.data?.message || 'Failed to update client';
+      }
       console.error('Update client error:', err);
       return { success: false, error: error.value };
     } finally {
