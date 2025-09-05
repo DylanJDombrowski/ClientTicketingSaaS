@@ -5,6 +5,7 @@ using ClientTicketingSaaS.Infrastructure.Identity;
 using ClientTicketingSaaS.Domain.Entities;
 using ClientTicketingSaaS.Domain.Enums;
 using MediatR;
+using ClientTicketingSaaS.Application.Auth.Common;
 
 namespace ClientTicketingSaaS.Infrastructure.Authentication.Commands.Register;
 

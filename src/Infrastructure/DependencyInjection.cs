@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using ClientTicketingSaaS.Infrastructure.Authentication;
+using System.Reflection; // Add this using
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -52,5 +53,9 @@ public static class DependencyInjection
         builder.Services.AddScoped<IJwtService, JwtService>();
         builder.Services.AddHttpContextAccessor();
 
+        // Register MediatR handlers from Infrastructure assembly
+        builder.Services.AddMediatR(cfg => {
+            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+        });
     }
 }
