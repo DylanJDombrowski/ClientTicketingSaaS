@@ -1,7 +1,9 @@
 using ClientTicketingSaaS.Application.Common.Interfaces;
-
-
-namespace ClientTicketingSaaS.Application.Auth.Commands.Login;
+namespace ClientTicketingSaaS.Infrastructure.Authentication.Commands.Login;
+using Microsoft.AspNetCore.Identity;
+using ClientTicketingSaaS.Infrastructure.Identity;
+using ClientTicketingSaaS.Application.Auth.Commands.Login; // for LoginCommand
+using MediatR;
 
 public class LoginCommandHandler : IRequestHandler<LoginCommand, LoginResult>
 {

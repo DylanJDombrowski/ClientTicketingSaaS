@@ -1,8 +1,12 @@
+using Microsoft.AspNetCore.Identity;
 using ClientTicketingSaaS.Application.Common.Interfaces;
+using ClientTicketingSaaS.Application.Auth.Commands.Register;
+using ClientTicketingSaaS.Infrastructure.Identity;
 using ClientTicketingSaaS.Domain.Entities;
 using ClientTicketingSaaS.Domain.Enums;
+using MediatR;
 
-namespace ClientTicketingSaaS.Application.Auth.Commands.Register;
+namespace ClientTicketingSaaS.Infrastructure.Authentication.Commands.Register;
 
 public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterResult>
 {
@@ -45,13 +49,13 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, RegisterR
         _context.Tenants.Add(tenant);
         await _context.SaveChangesAsync(cancellationToken);
 
-        // Create user
+        // Create user - handle nullable strings properly
         var user = new ApplicationUser
         {
             UserName = request.Email,
             Email = request.Email,
-            FirstName = request.FirstName,
-            LastName = request.LastName,
+            FirstName = request.FirstName ?? string.Empty, // Fix: Use null coalescing operator
+            LastName = request.LastName ?? string.Empty,   // Fix: Use null coalescing operator
             TenantId = tenant.Id,
             IsActive = true
         };
