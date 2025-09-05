@@ -4,6 +4,7 @@ using ClientTicketingSaaS.Domain.Enums;
 using ClientTicketingSaaS.Infrastructure.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -41,7 +42,8 @@ public class ApplicationDbContextInitialiser
     {
         try
         {
-            await _context.Database.EnsureCreatedAsync();
+            // Use migrations instead of EnsureCreated
+            await _context.Database.MigrateAsync();
         }
         catch (Exception ex)
         {
@@ -89,7 +91,7 @@ public class ApplicationDbContextInitialiser
             };
 
             _context.Tenants.Add(defaultTenant);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(); // Save tenant first
 
             // Create default admin user for the tenant
             var administrator = new ApplicationUser 
@@ -123,8 +125,9 @@ public class ApplicationDbContextInitialiser
             };
 
             _context.Clients.Add(sampleClient);
+            await _context.SaveChangesAsync(); // SAVE CLIENT FIRST to get the ID
 
-            // Create sample ticket
+            // NOW create ticket with the actual client ID
             var sampleTicket = new Ticket
             {
                 TenantId = defaultTenant.Id,
@@ -132,14 +135,13 @@ public class ApplicationDbContextInitialiser
                 Description = "This is a sample ticket to demonstrate the system. You can edit or delete this ticket.",
                 Status = TicketStatus.Open,
                 Priority = TicketPriority.Medium,
-                ClientId = sampleClient.Id,
+                ClientId = sampleClient.Id, // Now this has a real value
                 EstimatedHours = 2,
                 ActualHours = 0
             };
 
             _context.Tickets.Add(sampleTicket);
-
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(); // Save ticket
         }
     }
 }
