@@ -7,8 +7,19 @@ builder.AddKeyVaultIfConfigured();
 builder.AddApplicationServices();
 builder.AddInfrastructureServices();
 builder.AddWebServices();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Development", policy =>
+    {
+            policy.WithOrigins("http://localhost:4200", "http://localhost:4201") // Add both ports
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment() && args.Length == 0)
@@ -22,7 +33,11 @@ else
 }
 
 app.UseHealthChecks("/health");
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("Development");
+}
 app.UseStaticFiles();
 
 app.UseSwaggerUi(settings =>

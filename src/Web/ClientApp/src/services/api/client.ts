@@ -9,6 +9,13 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      // Add this for development
+      httpsAgent:
+        process.env.NODE_ENV === 'development'
+          ? {
+              rejectUnauthorized: false,
+            }
+          : undefined,
     });
 
     // Request interceptor to add auth token
