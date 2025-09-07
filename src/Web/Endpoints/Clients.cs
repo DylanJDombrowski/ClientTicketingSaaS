@@ -3,6 +3,7 @@ using ClientTicketingSaaS.Application.Clients.Commands.UpdateClient;
 using ClientTicketingSaaS.Application.Clients.Commands.DeleteClient;
 using ClientTicketingSaaS.Application.Clients.Queries.GetClients;
 using ClientTicketingSaaS.Application.Clients.Queries.GetClient;
+using ClientTicketingSaaS.Application.Common.Exceptions;
 
 namespace ClientTicketingSaaS.Web.Endpoints;
 
@@ -26,29 +27,81 @@ public class Clients : EndpointGroupBase
 
     public async Task<IResult> GetClient(ISender sender, int id)
     {
-        var query = new GetClientQuery(id);
-        var result = await sender.Send(query);
-        return Results.Ok(result);
+        try
+        {
+            var query = new GetClientQuery(id);
+            var result = await sender.Send(query);
+            return Results.Ok(result);
+        }
+        catch (Application.Common.Exceptions.NotFoundException)
+        {
+            return Results.NotFound($"Client with ID {id} not found");
+        }
     }
 
     public async Task<IResult> CreateClient(ISender sender, CreateClientCommand command)
     {
-        var id = await sender.Send(command);
-        return Results.Created($"/clients/{id}", new { Id = id });
+        try
+        {
+            var id = await sender.Send(command);
+            return Results.Created($"/api/clients/{id}", new { Id = id });
+        }
+        catch (ValidationException ex)
+        {
+            return Results.BadRequest(new { Errors = ex.Errors });
+        }
     }
 
-    public async Task<IResult> UpdateClient(ISender sender, int id, UpdateClientCommand command)
+    public async Task<IResult> UpdateClient(ISender sender, int id, UpdateClientRequest request)
     {
-        if (id != command.Id)
-            return Results.BadRequest("ID mismatch");
+        try
+        {
+            var command = new UpdateClientCommand
+            {
+                Id = id,
+                Name = request.Name,
+                Email = request.Email,
+                Phone = request.Phone,
+                Company = request.Company,
+                IsActive = request.IsActive
+            };
 
-        await sender.Send(command);
-        return Results.NoContent();
+            await sender.Send(command);
+            return Results.NoContent();
+        }
+        catch (Application.Common.Exceptions.NotFoundException)
+        {
+            return Results.NotFound($"Client with ID {id} not found");
+        }
+        catch (ValidationException ex)
+        {
+            return Results.BadRequest(new { Errors = ex.Errors });
+        }
     }
 
     public async Task<IResult> DeleteClient(ISender sender, int id)
     {
-        await sender.Send(new DeleteClientCommand(id));
-        return Results.NoContent();
+        try
+        {
+            await sender.Send(new DeleteClientCommand(id));
+            return Results.NoContent();
+        }
+        catch (Application.Common.Exceptions.NotFoundException)
+        {
+            return Results.NotFound($"Client with ID {id} not found");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { Message = ex.Message });
+        }
     }
 }
+
+// Request DTOs for the API
+public record UpdateClientRequest(
+    string Name,
+    string Email,
+    string? Phone,
+    string? Company,
+    bool IsActive
+);
