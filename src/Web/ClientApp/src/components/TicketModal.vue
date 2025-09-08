@@ -283,12 +283,7 @@
 import { ref, computed, watch } from "vue";
 import { useTicketsStore } from "../stores/tickets";
 import { useClientsStore } from "../stores/clients";
-import type {
-  Ticket,
-  CreateTicketRequest,
-  TicketStatus,
-  TicketPriority,
-} from "../types/ticket";
+import type { Ticket, CreateTicketRequest } from "../types/ticket";
 
 interface Props {
   ticket?: Ticket | null;
@@ -308,14 +303,59 @@ const emit = defineEmits<Emits>();
 const ticketsStore = useTicketsStore();
 const clientsStore = useClientsStore();
 
-// State
+// Enum mapping functions
+const priorityToEnum = (priority: string): number => {
+  const mapping: Record<string, number> = {
+    low: 1,
+    medium: 2,
+    high: 3,
+    urgent: 4,
+  };
+  return mapping[priority] || 2;
+};
+
+const enumToPriority = (enumValue: number): string => {
+  const mapping: Record<number, string> = {
+    1: "low",
+    2: "medium",
+    3: "high",
+    4: "urgent",
+  };
+  return mapping[enumValue] || "medium";
+};
+
+const statusToEnum = (status: string): number => {
+  const mapping: Record<string, number> = {
+    open: 1,
+    in_progress: 2,
+    pending_review: 3,
+    resolved: 4,
+    closed: 5,
+    cancelled: 6,
+  };
+  return mapping[status] || 1;
+};
+
+const enumToStatus = (enumValue: number): string => {
+  const mapping: Record<number, string> = {
+    1: "open",
+    2: "in_progress",
+    3: "pending_review",
+    4: "resolved",
+    5: "closed",
+    6: "cancelled",
+  };
+  return mapping[enumValue] || "open";
+};
+
+// State - using strings for form values, will convert when sending to API
 const loading = ref(false);
 const form = ref({
   title: "",
   description: "",
   clientId: null as number | null,
-  priority: "" as TicketPriority | "",
-  status: "open" as TicketStatus,
+  priority: "" as string, // Use string for form
+  status: "open" as string, // Use string for form
   dueDate: "",
   estimatedHours: null as number | null,
   assignedTo: "",
@@ -340,22 +380,22 @@ watch(
         title: ticket.title,
         description: ticket.description,
         clientId: ticket.clientId,
-        priority: ticket.priority,
-        status: ticket.status,
+        priority: enumToPriority(ticket.priority), // Convert enum to string
+        status: enumToStatus(ticket.status), // Convert enum to string
         dueDate: ticket.dueDate ? ticket.dueDate.split("T")[0] : "",
         estimatedHours: ticket.estimatedHours || null,
-        assignedTo: ticket.assignedTo || "",
-        tags: ticket.tags || [],
+        assignedTo: ticket.assignedToId || "", // Fixed property name
+        tags: [], // Tags not supported yet in backend DTO
       };
-      tagsInput.value = ticket.tags?.join(", ") || "";
+      tagsInput.value = ""; // Tags not supported yet
     } else {
       // Reset form for new ticket
       form.value = {
         title: "",
         description: "",
         clientId: null,
-        priority: "",
-        status: "open",
+        priority: "medium", // String default
+        status: "open", // String default
         dueDate: "",
         estimatedHours: null,
         assignedTo: "",
@@ -428,28 +468,34 @@ const handleSubmit = async () => {
   try {
     let result;
 
+    // Helper function to convert date string to UTC ISO string
+    const convertToUTC = (dateString: string): string | undefined => {
+      if (!dateString) return undefined;
+      // Create date object and ensure it's treated as UTC
+      const date = new Date(dateString + "T00:00:00.000Z");
+      return date.toISOString();
+    };
+
     if (isEdit.value && props.ticket) {
-      // Update existing ticket
+      // Update existing ticket - convert to enums and fix dates
       result = await ticketsStore.updateTicket(props.ticket.id, {
         title: form.value.title,
         description: form.value.description,
-        status: form.value.status,
-        priority: form.value.priority as TicketPriority,
-        assignedTo: form.value.assignedTo || undefined,
-        dueDate: form.value.dueDate || undefined,
-        estimatedHours: form.value.estimatedHours || undefined,
-        tags: form.value.tags.length > 0 ? form.value.tags : undefined,
+        status: statusToEnum(form.value.status), // Convert to enum
+        priority: priorityToEnum(form.value.priority), // Convert to enum
+        assignedToId: form.value.assignedTo || undefined,
+        dueDate: convertToUTC(form.value.dueDate), // Convert to UTC
+        estimatedHours: form.value.estimatedHours || 0,
       });
     } else {
-      // Create new ticket
+      // Create new ticket - convert to enums and fix dates
       const createData: CreateTicketRequest = {
         title: form.value.title,
         description: form.value.description,
         clientId: form.value.clientId!,
-        priority: form.value.priority as TicketPriority,
-        dueDate: form.value.dueDate || undefined,
+        priority: priorityToEnum(form.value.priority), // Convert to enum
+        dueDate: convertToUTC(form.value.dueDate), // Convert to UTC
         estimatedHours: form.value.estimatedHours || undefined,
-        tags: form.value.tags.length > 0 ? form.value.tags : undefined,
       };
       result = await ticketsStore.createTicket(createData);
     }

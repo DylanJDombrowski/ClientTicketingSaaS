@@ -1,3 +1,5 @@
+// Replace src/Web/ClientApp/src/services/api/tickets.ts with this:
+
 import { apiClient } from './client';
 import type {
   Ticket,
@@ -13,7 +15,19 @@ import type {
 export const ticketsApi = {
   // Get all tickets for current tenant
   async getTickets(filters?: TicketFilters): Promise<Ticket[]> {
-    return await apiClient.get<Ticket[]>('/tickets', filters);
+    const params = new URLSearchParams();
+
+    if (filters?.status) params.append('status', filters.status.toString());
+    if (filters?.priority)
+      params.append('priority', filters.priority.toString());
+    if (filters?.clientId)
+      params.append('clientId', filters.clientId.toString());
+    if (filters?.assignedTo) params.append('assignedToId', filters.assignedTo);
+
+    const queryString = params.toString();
+    const url = queryString ? `/tickets?${queryString}` : '/tickets';
+
+    return await apiClient.get<Ticket[]>(url);
   },
 
   // Get single ticket by ID with comments and time entries
@@ -23,59 +37,26 @@ export const ticketsApi = {
 
   // Create new ticket
   async createTicket(data: CreateTicketRequest): Promise<Ticket> {
-    // Mock implementation for now - will be replaced with real API
-    const mockTicket: Ticket = {
-      id: Math.floor(Math.random() * 10000),
-      ...data,
-      status: 'open',
-      clientName: 'Mock Client', // Will come from client lookup
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      actualHours: 0,
-      comments: [],
-      timeEntries: [],
-    };
-
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return mockTicket;
+    const response = await apiClient.post<{ id: number }>('/tickets', data);
+    // Fetch the created ticket to return full data
+    return await this.getTicket(response.id);
   },
 
   // Update existing ticket
   async updateTicket(id: number, data: UpdateTicketRequest): Promise<Ticket> {
-    // Mock implementation - in real API this would be:
-    // await apiClient.put<void>(`/tickets/${id}`, data)
-    // return await this.getTicket(id)
+    await apiClient.put<void>(`/tickets/${id}`, data);
+    return await this.getTicket(id);
+  },
 
-    // For now, return mock updated ticket
-    const mockTicket: Ticket = {
-      id,
-      title: data.title || 'Updated Ticket',
-      description: data.description || 'Updated description',
-      clientId: 1,
-      clientName: 'Mock Client',
-      status: data.status || 'open',
-      priority: data.priority || 'medium',
-      assignedTo: data.assignedTo,
-      dueDate: data.dueDate,
-      estimatedHours: data.estimatedHours,
-      actualHours: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      tags: data.tags,
-      comments: [],
-      timeEntries: [],
-    };
-
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockTicket;
+  // Update just the ticket status
+  async updateTicketStatus(id: number, status: number): Promise<Ticket> {
+    await apiClient.patch<void>(`/tickets/${id}/status`, { status });
+    return await this.getTicket(id);
   },
 
   // Delete ticket
   async deleteTicket(id: number): Promise<void> {
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return;
+    return await apiClient.delete<void>(`/tickets/${id}`);
   },
 
   // Add comment to ticket
@@ -83,56 +64,37 @@ export const ticketsApi = {
     ticketId: number,
     data: CreateCommentRequest
   ): Promise<TicketComment> {
-    // Mock implementation
-    const mockComment: TicketComment = {
-      id: Math.floor(Math.random() * 10000),
-      ticketId,
-      ...data,
-      authorName: 'Current User', // Will come from auth context
-      createdAt: new Date().toISOString(),
-    };
-
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockComment;
+    // Note: This endpoint doesn't exist yet in your backend
+    throw new Error('Add comment endpoint not implemented yet');
   },
 
   // Add time entry to ticket
   async addTimeEntry(data: CreateTimeEntryRequest): Promise<TimeEntry> {
-    // Mock implementation
-    const mockTimeEntry: TimeEntry = {
-      id: Math.floor(Math.random() * 10000),
-      ...data,
-      createdBy: 'Current User', // Will come from auth context
-      createdAt: new Date().toISOString(),
-    };
+    const response = await apiClient.post<{ id: number }>(
+      '/time-entries',
+      data
+    );
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockTimeEntry;
+    // Return properly typed object matching TimeEntry interface
+    return {
+      id: response.id,
+      description: data.description,
+      hours: data.hours,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      isBillable: data.isBillable,
+      created: new Date().toISOString(), // Fixed: use 'created' not 'createdAt'
+      createdBy: 'Current User',
+    };
   },
 
   // Get time entries for a ticket
   async getTimeEntries(ticketId: number): Promise<TimeEntry[]> {
-    return await apiClient.get<TimeEntry[]>(
-      `/tickets/${ticketId}/time-entries`
-    );
-  },
-
-  // Update time entry
-  async updateTimeEntry(
-    id: number,
-    data: Partial<TimeEntry>
-  ): Promise<TimeEntry> {
-    await apiClient.put<void>(`/time-entries/${id}`, data);
-    return await apiClient.get<TimeEntry>(`/time-entries/${id}`);
-  },
-
-  // Delete time entry
-  async deleteTimeEntry(id: number): Promise<void> {
-    return await apiClient.delete<void>(`/time-entries/${id}`);
+    return await apiClient.get<TimeEntry[]>(`/time-entries/ticket/${ticketId}`);
   },
 
   // Search tickets
   async searchTickets(query: string): Promise<Ticket[]> {
-    return await apiClient.get<Ticket[]>('/tickets/search', { q: query });
+    return await apiClient.get<Ticket[]>('/tickets', { search: query });
   },
 };

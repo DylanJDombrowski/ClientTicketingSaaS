@@ -1,3 +1,5 @@
+// Replace src/Application/Tickets/Commands/CreateTicket/CreateTicketCommand.cs
+
 using ClientTicketingSaaS.Application.Common.Interfaces;
 using ClientTicketingSaaS.Domain.Entities;
 
@@ -40,7 +42,7 @@ public class CreateTicketCommandValidator : AbstractValidator<CreateTicketComman
             .GreaterThanOrEqualTo(0);
 
         RuleFor(v => v.DueDate)
-            .GreaterThan(DateTime.Now)
+            .GreaterThan(DateTime.UtcNow) // Use UTC for comparison
             .When(v => v.DueDate.HasValue)
             .WithMessage("Due date must be in the future.");
     }
@@ -76,7 +78,8 @@ public class CreateTicketCommandHandler : IRequestHandler<CreateTicketCommand, i
             ClientId = request.ClientId,
             Priority = request.Priority,
             Status = TicketStatus.Open,
-            DueDate = request.DueDate,
+            // Convert to UTC if DueDate is provided
+            DueDate = request.DueDate?.ToUniversalTime(),
             EstimatedHours = request.EstimatedHours,
             ActualHours = 0
         };

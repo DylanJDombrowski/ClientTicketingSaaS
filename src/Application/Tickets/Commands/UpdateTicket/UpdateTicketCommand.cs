@@ -1,3 +1,5 @@
+// Replace src/Application/Tickets/Commands/UpdateTicket/UpdateTicketCommand.cs
+
 using ClientTicketingSaaS.Application.Common.Interfaces;
 
 namespace ClientTicketingSaaS.Application.Tickets.Commands.UpdateTicket;
@@ -30,7 +32,7 @@ public class UpdateTicketCommandValidator : AbstractValidator<UpdateTicketComman
             .GreaterThanOrEqualTo(0);
 
         RuleFor(v => v.DueDate)
-            .GreaterThan(DateTime.Now)
+            .GreaterThan(DateTime.UtcNow) // Use UTC for comparison
             .When(v => v.DueDate.HasValue)
             .WithMessage("Due date must be in the future.");
     }
@@ -62,7 +64,8 @@ public class UpdateTicketCommandHandler : IRequestHandler<UpdateTicketCommand>
         entity.Status = request.Status;
         entity.Priority = request.Priority;
         entity.AssignedToId = request.AssignedToId;
-        entity.DueDate = request.DueDate;
+        // Convert to UTC if DueDate is provided
+        entity.DueDate = request.DueDate?.ToUniversalTime();
         entity.EstimatedHours = request.EstimatedHours;
 
         await _context.SaveChangesAsync(cancellationToken);
